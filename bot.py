@@ -2,9 +2,9 @@ from logging import exception
 import telebot
 from telebot import types
 import configure
+import re
 
 client = telebot.TeleBot(configure.config['token'])
-
 
 class Ivent:
     def __init__(self, id, name, description, date, time, place, subject, pay, number_of_seats, who_create) -> None:
@@ -22,7 +22,6 @@ class Ivent:
 
 ivent_dict = {}
 user_set = dict()
-
 
 # add_ivent, edit_ivent, view_ivent, search_ivent
 @client.message_handler(commands=['start', 'reset'])
@@ -57,18 +56,25 @@ def choose_handler(message: types.Message):
     elif message.text == "Поиск по событиям":
         client.send_message(message.chat.id, 'Фильтры')
     elif message.text == "Мой аккаунт":
-        client.send_message(message.chat.id, 'Ваше имя: ' + user_set[message.chat.id])
+        client.send_message(message.chat.id, 'Ваше имя: ' + user_set[message.chat.id][0])
 
 
 def registration(message: types.Message):
-    client.send_message(message.chat.id, 'Введите свое имя: ')
+    client.send_message(message.chat.id, 'Введите свое ФИО: ')
     client.register_next_step_handler(message, registration_step2)
 
-
 def registration_step2(message: types.Message):
-    client.send_message(message.chat.id, 'Ваше имя: ' + message.text)
+    if re.match(r'^[А-ЯЁ][а-яё]+(-[А-Яа-яЁё][а-яё]+)*( [А-ЯЁ][а-яё]+(-[А-Яа-яЁё][а-яё]+)*)+$', message.text) is not None:
+        client.send_message(message.chat.id, 'Введите вашу дату рождения в формате дд.мм.гггг:')
+        client.register_next_step_handler(message, registration_step3, message.text)
+    else:
+        client.send_message(message.chat.id, 'Некорректный ввод. Попробуйте ещё раз.')
+        client.register_next_step_handler(message, registration_step2)
+
+def registration_step3(message: types.Message, name):
     client.send_message(message.chat.id, 'Вы успешно зарегестрированы')
-    user_set[message.chat.id] = message.text
+    # TODO Здесь подключение к бд
+    user_set[message.chat.id] = [name, message.text]
     welcome_message(message)
 
 
